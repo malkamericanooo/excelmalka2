@@ -4,7 +4,7 @@ import { PatientRecord } from "./types";
 export const TOTAL_COLS = 62;
 
 /**
- * Exact header colors from fktpmar26 template (extracted from source file).
+ * Header colors — kept for MappingPreview and tests.
  * Key = column index (0-based), Value = hex color string (no #).
  */
 export const COL_COLORS: Record<number, string> = {
@@ -31,125 +31,12 @@ export const COL_COLORS: Record<number, string> = {
   58: "BF8F00", 59: "BF8F00", 60: "BF8F00", 61: "BF8F00",
 };
 
-/** Data-row background (light blue, matches template data area) */
-const DATA_ROW_BG = "FFBED7EE";
+/** Number of header rows in the fktpmar26 template */
+const HEADER_ROW_COUNT = 5;
 
-/**
- * 5-row header structure matching the fktpmar26 template exactly.
- * Row 0 = institutional, Row 1 = group headers,
- * Row 2 = sub-group/column headers, Row 3 = sub-column headers,
- * Row 4 = leaf headers.
- */
-export const HEADER_ROWS: string[][] = [
-  // Row 0 – institutional
-  Array(TOTAL_COLS).fill(""),
-
-  // Row 1 – major group headers
-  [
-    "",
-    "TANGGAL PEMERIKSAAN*",
-    "IDENTITAS PESERTA PUSKESMAS", "", "", "", "", "", "", "", "", "", "", "",
-    "RIWAYAT PENYAKIT TIDAK MENULAR PADA KELUARGA", "", "",
-    "RIWAYAT PENYAKIT TIDAK MENULAR PADA DIRI SENDIRI", "", "",
-    "FAKTOR RISIKO", "", "", "", "", "", "",
-    "TEKANAN DARAH", "",
-    "IMT", "",
-    "LINGKAR PERUT(CM)",
-    "PEMERIKSAAN GULA",
-    "RUJUK RS",
-    "DIAGNOSIS", "", "",
-    "TERAPI FARMAKOLOGI",
-    "KONSELING, INFORMASI DAN EDUKASI KESAHATAN",
-    "GANGGUAN INDERA", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "PEMERIKSAAN IVA & SADANIS", "", "", "",
-    "FORM UBM", "", "", "",
-  ],
-
-  // Row 2 – column-level headers
-  [
-    "",
-    "",
-    "NIK",
-    "NAMA PASIEN*",
-    "TANGGAL LAHIR *",
-    "JENIS KELAMIN *",
-    "PROVINSI ASAL PASIEN (JIKA TIDAK DIISI AKAN MENGIKUTI PROVINSI PUSKESMAS)",
-    "KOTA/KAB. ASAL PASIEN (JIKA TIDAK DIISI AKAN MENGIKUTI KAB.KOT PUSKESMAS)",
-    "ALAMAT*",
-    "NO.TELP/HP",
-    "STATUS PENDIDIKAN",
-    "PEKERJAAN",
-    "STATUS PERKAWINAN",
-    "GOLONGAN DARAH",
-    "RIWAYAT 1",
-    "RIWAYAT 2",
-    "RIWAYAT 3",
-    "RIWAYAT 1",
-    "RIWAYAT 2",
-    "RIWAYAT 3",
-    "MEROKOK",
-    "KURANG AKTIFITAS FISIK",
-    "POLA MAKAN", "", "", "",
-    "KONSUMSI ALKOHOL",
-    "SISTOL",
-    "DIASTOL",
-    "TINGGI BADAN(CM)",
-    "BERAT BADAN (KG)",
-    "",
-    "",
-    "",
-    "DIAGNOSIS 1",
-    "DIAGNOSIS 2",
-    "DIAGNOSIS 3",
-    "",
-    "",
-    "GANGGUAN PENGLIHATAN", "", "", "", "", "",
-    "GANGGUAN PENDENGARAN", "", "", "", "", "", "", "", "",
-    "PEMERIKSAAN IVA", "",
-    "PEMERIKSAAN SADANIS", "",
-    "KONSELING",
-    "CAR",
-    "RUJUK UBM",
-    "KONDISI",
-  ],
-
-  // Row 3 – sub-column headers
-  [
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "", "", "",
-    "", "",
-    "GULA BERLEBIHAN",
-    "GARAM BERLEBIHAN",
-    "LEMAK BERLEBIHAN",
-    "KURANG MAKAN BUAH DAN SAYUR",
-    "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "KATARAK", "", "",
-    "KELAINAN REFRAKSI", "", "",
-    "CURIGA TULI KONGENITAL", "", "",
-    "(OMSK/CONGEK)", "", "",
-    "SERUMEN", "", "",
-    "HASIL IVA",
-    "TINDAK LANJUT IVA POSITIF",
-    "HASIL SADANIS",
-    "TINDAK LANJUT SADANIS",
-    "", "", "", "",
-  ],
-
-  // Row 4 – leaf headers (Mata Kanan / Kiri / Rujuk RS)
-  [
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "", "", "",
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-    "", "", "", "", "",
-    "MATA KANAN", "MATA KIRI", "RUJUK  RS",
-    "MATA KANAN", "MATA KIRI", "RUJUK  RS",
-    "TELINGA KANAN", "TELINGA KIRI", "RUJUK  RS",
-    "TELINGA KANAN", "TELINGA KIRI", "RUJUK  RS",
-    "TELINGA KANAN", "TELINGA KIRI", "RUJUK  RS",
-    "", "", "", "",
-    "", "", "", "",
-  ],
-];
+/** Data-row background (light blue) */
+const DATA_BG = "FFBED7EE";
+const DATA_BORDER_COLOR = "FFB0C4DE";
 
 /**
  * Map one PatientRecord to a flat row array (62 elements, 0-indexed).
@@ -222,102 +109,55 @@ export function recordToRow(record: PatientRecord, index: number): unknown[] {
   ];
 }
 
-/** Column widths in characters (62 cols, 0-indexed) */
-const COL_WIDTHS = [
-  4, 18, 18, 24, 14, 12, 22, 22, 28, 14, 16, 18, 16, 10,
-  16, 16, 16, 16, 16, 16,
-  10, 14, 14, 14, 14, 18, 10,
-  8, 8, 10, 10, 12, 14, 10,
-  20, 20, 20, 20, 22,
-  12, 12, 10, 12, 12, 10,
-  12, 12, 10, 12, 12, 10, 12, 12, 10,
-  12, 18, 14, 18,
-  12, 8, 10, 12,
-];
-
-/** Header row heights in points */
-const HEADER_HEIGHTS = [20, 40, 50, 40, 30];
-
-function argb(hex: string): string {
-  return "FF" + hex.toUpperCase();
-}
-
-const WHITE = argb("FFFFFF");
-
-function headerFill(colIdx: number): ExcelJS.Fill {
-  const color = COL_COLORS[colIdx] ?? "2F5597";
-  return { type: "pattern", pattern: "solid", fgColor: { argb: argb(color) } };
-}
-
-function headerFont(colIdx: number): Partial<ExcelJS.Font> {
-  const dark = ["385623", "00B050"];
-  const color = COL_COLORS[colIdx] ?? "2F5597";
-  const textColor = dark.includes(color) ? "FFFFFF" : "FFFFFF";
-  return { bold: true, color: { argb: argb(textColor) }, size: 9 };
-}
-
-const HEADER_ALIGNMENT: Partial<ExcelJS.Alignment> = {
-  horizontal: "center",
-  vertical: "middle",
-  wrapText: true,
-};
-
-const DATA_ALIGNMENT: Partial<ExcelJS.Alignment> = {
-  vertical: "middle",
-  wrapText: false,
-};
-
-function thinBorder(colorArgb: string): Partial<ExcelJS.Borders> {
-  const s: ExcelJS.BorderStyle = "thin";
-  const c = { argb: colorArgb };
-  return { top: { style: s, color: c }, bottom: { style: s, color: c }, left: { style: s, color: c }, right: { style: s, color: c } };
-}
-
+/**
+ * Export records by loading the fktpmar26 blank template, clearing its data
+ * rows, filling in mapped data, then triggering a browser download.
+ *
+ * The template already contains the correct header colors and structure —
+ * no need to recreate them programmatically.
+ */
 export async function exportToExcel(
   records: PatientRecord[],
   filename: string = "fktpmar26_export.xlsx"
 ): Promise<void> {
+  // Load blank template from public folder
+  const res = await fetch("/fktp_template.xlsx");
+  if (!res.ok) throw new Error(`Gagal memuat template: ${res.status}`);
+  const templateBuf = await res.arrayBuffer();
+
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("fktpmar26");
+  await wb.xlsx.load(templateBuf);
 
-  // Column widths
-  ws.columns = COL_WIDTHS.map((w) => ({ width: w }));
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error("Template tidak memiliki sheet.");
 
-  // Add header rows
-  HEADER_ROWS.forEach((headerRow, ri) => {
-    const row = ws.addRow(headerRow);
-    row.height = HEADER_HEIGHTS[ri] ?? 20;
-    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-      const ci = colNum - 1; // 0-based
-      if (ci >= TOTAL_COLS) return;
-      cell.fill = headerFill(ci);
-      cell.font = headerFont(ci);
-      cell.alignment = HEADER_ALIGNMENT;
-      cell.border = thinBorder(WHITE);
-    });
-  });
+  // Remove any existing data rows (keep only header rows)
+  const totalRows = ws.rowCount;
+  if (totalRows > HEADER_ROW_COUNT) {
+    ws.spliceRows(HEADER_ROW_COUNT + 1, totalRows - HEADER_ROW_COUNT);
+  }
 
-  // Add data rows
+  // Append mapped data rows
+  const thin = (argb: string): ExcelJS.Border => ({ style: "thin", color: { argb } });
+  const borders: Partial<ExcelJS.Borders> = {
+    top: thin(DATA_BORDER_COLOR), bottom: thin(DATA_BORDER_COLOR),
+    left: thin(DATA_BORDER_COLOR), right: thin(DATA_BORDER_COLOR),
+  };
+
   records.forEach((record, i) => {
     const values = recordToRow(record, i) as (string | number)[];
     const row = ws.addRow(values);
     row.height = 15;
     row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-      const ci = colNum - 1;
-      if (ci >= TOTAL_COLS) return;
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DATA_ROW_BG } };
+      if (colNum > TOTAL_COLS) return;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DATA_BG } };
       cell.font = { size: 9 };
-      cell.alignment = DATA_ALIGNMENT;
-      cell.border = thinBorder("FFB0C4DE");
+      cell.alignment = { vertical: "middle", wrapText: false };
+      cell.border = borders;
     });
   });
 
-  // Freeze top 5 rows + first 2 columns
-  ws.views = [
-    { state: "frozen", xSplit: 2, ySplit: HEADER_ROWS.length, topLeftCell: "C6", activeCell: "C6" },
-  ];
-
-  // Write to buffer and trigger browser download
+  // Trigger browser download
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -342,7 +182,6 @@ export function recordToPreview(
     { label: "Nama Pasien", value: record.namaPasien },
     { label: "Tanggal Lahir", value: record.tanggalLahir },
     { label: "Jenis Kelamin", value: record.jenisKelamin },
-    { label: "Usia", value: record.usia },
     { label: "Provinsi Asal", value: record.provinsiAsal },
     { label: "Kota/Kab Asal", value: record.kotaKabupatenAsal },
     { label: "Alamat", value: record.alamat },
@@ -368,7 +207,6 @@ export function recordToPreview(
     { label: "Diastol", value: record.diastol },
     { label: "Tinggi Badan (cm)", value: record.tinggiBadan },
     { label: "Berat Badan (kg)", value: record.beratBadan },
-    { label: "IMT", value: record.imt },
     { label: "Lingkar Perut (cm)", value: record.lingkarPerut },
     { label: "Gula Darah", value: record.pemeriksaanGulaDarah },
     { label: "Rujuk RS", value: record.rujukRs },

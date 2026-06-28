@@ -250,7 +250,6 @@ describe("recordToPreview", () => {
     expect(labels).toContain("NIK");
     expect(labels).toContain("Nama Pasien");
     expect(labels).toContain("Jenis Kelamin");
-    expect(labels).toContain("Usia");
     expect(labels).toContain("Tanggal Lahir");
     expect(labels).toContain("Alamat");
   });
@@ -263,7 +262,6 @@ describe("recordToPreview", () => {
     expect(labels).toContain("Tinggi Badan (cm)");
     expect(labels).toContain("Berat Badan (kg)");
     expect(labels).toContain("Lingkar Perut (cm)");
-    expect(labels).toContain("IMT");
     expect(labels).toContain("Gula Darah");
   });
 
@@ -291,12 +289,10 @@ describe("recordToPreview", () => {
     expect(byLabel["NIK"]).toBe("6309064508970003");
     expect(byLabel["Nama Pasien"]).toBe("IRMA AGUSTINA");
     expect(byLabel["Jenis Kelamin"]).toBe("Perempuan");
-    expect(byLabel["Usia"]).toBe(28);
     expect(byLabel["Sistol"]).toBe(125);
     expect(byLabel["Diastol"]).toBe(88);
     expect(byLabel["Tinggi Badan (cm)"]).toBe(153);
     expect(byLabel["Berat Badan (kg)"]).toBe(84);
-    expect(byLabel["IMT"]).toBe(35.9);
     expect(byLabel["Gula Darah"]).toBe(117);
     expect(byLabel["Diagnosis 1"]).toBe("Obesitas");
     expect(byLabel["Diagnosis 2"]).toBe("Hipertensi Grade I");
@@ -321,7 +317,6 @@ describe("recordToPreview", () => {
     expect(byLabel["NIK"]).toBe("6309032703760003");
     expect(byLabel["Nama Pasien"]).toBe("ZUKRI");
     expect(byLabel["Jenis Kelamin"]).toBe("Laki-laki");
-    expect(byLabel["Usia"]).toBe(50);
     expect(byLabel["Sistol"]).toBe(130);
     expect(byLabel["Diagnosis 1"]).toBe("Hipertensi Grade I");
   });
@@ -333,23 +328,33 @@ describe("recordToPreview", () => {
 
 describe("exportToExcel — integration (mocked I/O)", () => {
   beforeEach(() => {
+    // Mock fetch so template file is not actually requested
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+    }));
+
     // Mock ExcelJS Workbook so no real file is written
     vi.mock("exceljs", () => {
       const mockWriteBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
+      const mockCell = { fill: null, font: null, alignment: null, border: null };
       const mockAddRow = vi.fn().mockReturnValue({
         height: 0,
-        eachCell: vi.fn((_opts: unknown, cb: (cell: { fill: unknown; font: unknown; alignment: unknown; border: unknown }, colNum: number) => void) => {
-          for (let c = 1; c <= 62; c++) cb({ fill: null, font: null, alignment: null, border: null }, c);
+        eachCell: vi.fn((_opts: unknown, cb: (cell: typeof mockCell, colNum: number) => void) => {
+          for (let c = 1; c <= 62; c++) cb(mockCell, c);
         }),
       });
       const mockWorksheet = {
+        rowCount: 5,
         columns: [],
         views: [],
         addRow: mockAddRow,
+        spliceRows: vi.fn(),
       };
       const MockWorkbook = vi.fn().mockImplementation(() => ({
         addWorksheet: vi.fn().mockReturnValue(mockWorksheet),
-        xlsx: { writeBuffer: mockWriteBuffer },
+        worksheets: [mockWorksheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined), writeBuffer: mockWriteBuffer },
       }));
       return { default: { Workbook: MockWorkbook } };
     });
