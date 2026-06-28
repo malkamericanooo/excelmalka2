@@ -92,7 +92,12 @@ export default function App() {
   }
 
   async function handleExport() {
-    await exportToExcel(records, exportFilename);
+    try {
+      await exportToExcel(records, exportFilename);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Export gagal: ${msg}\n\nCoba refresh halaman lalu upload ulang file.`);
+    }
   }
 
   function handleReset() {
