@@ -8,7 +8,7 @@ interface EditModalProps {
   onSave: (updated: PatientRecord) => void;
 }
 
-type FieldConfig = { key: keyof PatientRecord; label: string; type?: "text" | "number" | "select"; options?: string[] };
+type FieldConfig = { key: keyof PatientRecord; label: string; type?: "text" | "number" | "select" | "readonly"; options?: string[] };
 
 const YA_TIDAK: string[] = ["Ya", "Tidak"];
 const POS_NEG: string[] = ["Positif", "Negatif", "Tidak Diperiksa"];
@@ -24,7 +24,7 @@ const SECTIONS: Array<{ title: string; icon: React.ReactNode; color: string; fie
       { key: "namaPasien", label: "Nama Pasien" },
       { key: "tanggalLahir", label: "Tanggal Lahir" },
       { key: "jenisKelamin", label: "Jenis Kelamin", type: "select", options: ["Laki-laki", "Perempuan"] },
-      { key: "usia", label: "Usia", type: "number" },
+      { key: "usia", label: "Usia (tahun, otomatis dari Tgl Lahir)", type: "readonly" },
       { key: "provinsiAsal", label: "Provinsi Asal" },
       { key: "kotaKabupatenAsal", label: "Kota/Kab Asal" },
       { key: "alamat", label: "Alamat" },
@@ -64,7 +64,7 @@ const SECTIONS: Array<{ title: string; icon: React.ReactNode; color: string; fie
       { key: "diastol", label: "Diastol (mmHg)", type: "number" },
       { key: "tinggiBadan", label: "Tinggi Badan (cm)", type: "number" },
       { key: "beratBadan", label: "Berat Badan (kg)", type: "number" },
-      { key: "imt", label: "IMT (dihitung otomatis)", type: "number" },
+      { key: "imt", label: "IMT (otomatis dari TB & BB)", type: "readonly" },
       { key: "lingkarPerut", label: "Lingkar Perut (cm)", type: "number" },
       { key: "pemeriksaanGulaDarah", label: "Gula Darah", type: "number" },
       { key: "rujukRs", label: "Rujuk RS", type: "select", options: YA_TIDAK },
@@ -148,8 +148,53 @@ export function EditModal({ record, onClose, onSave }: EditModalProps) {
 
   if (!record || !form) return null;
 
+  function computeImt(tb: string | number, bb: string | number): string | number {
+    const h = Number(tb);
+    const w = Number(bb);
+    if (h > 0 && w > 0) return +(w / ((h / 100) ** 2)).toFixed(1);
+    return "";
+  }
+
+  function computeUsia(tglLahir: string | number, tglPeriksa: string | number): string | number {
+    const parse = (s: string | number) => {
+      const str = String(s ?? "").trim();
+      const parts = str.split(/[-/]/);
+      if (parts.length === 3) {
+        const [a, b, c] = parts.map(Number);
+        // dd-mm-yyyy or yyyy-mm-dd
+        if (a > 31) return new Date(a, b - 1, c);
+        return new Date(c, b - 1, a);
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const dLahir = parse(tglLahir);
+    const dPeriksa = parse(tglPeriksa);
+    if (!dLahir || !dPeriksa) return "";
+    let age = (dPeriksa as Date).getFullYear() - (dLahir as Date).getFullYear();
+    const m = (dPeriksa as Date).getMonth() - (dLahir as Date).getMonth();
+    if (m < 0 || (m === 0 && (dPeriksa as Date).getDate() < (dLahir as Date).getDate())) age--;
+    return age >= 0 ? age : "";
+  }
+
   function updateField(key: keyof PatientRecord, value: string | number) {
-    setForm((prev) => prev ? { ...prev, [key]: value } : prev);
+    setForm((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, [key]: value };
+      if (key === "tinggiBadan" || key === "beratBadan") {
+        updated.imt = computeImt(
+          key === "tinggiBadan" ? value : prev.tinggiBadan,
+          key === "beratBadan" ? value : prev.beratBadan
+        );
+      }
+      if (key === "tanggalLahir" || key === "tanggalPemeriksaan") {
+        updated.usia = computeUsia(
+          key === "tanggalLahir" ? value : prev.tanggalLahir,
+          key === "tanggalPemeriksaan" ? value : prev.tanggalPemeriksaan
+        );
+      }
+      return updated;
+    });
   }
 
   function handleSave() {
@@ -205,7 +250,11 @@ export function EditModal({ record, onClose, onSave }: EditModalProps) {
                 <label className="block text-xs font-medium text-slate-600 mb-1">
                   {field.label}
                 </label>
-                {field.type === "select" && field.options ? (
+                {field.type === "readonly" ? (
+                  <div className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-500 select-none">
+                    {String(form[field.key] ?? "") || <span className="italic text-slate-300">—</span>}
+                  </div>
+                ) : field.type === "select" && field.options ? (
                   <select
                     value={String(form[field.key] ?? "")}
                     onChange={(e) => updateField(field.key, e.target.value)}

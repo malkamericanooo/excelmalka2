@@ -248,10 +248,9 @@ describe("validator — Usia", () => {
     expect(issues.length).toBeGreaterThan(0);
   });
 
-  it("warning when usia is empty", () => {
+  it("no warning when usia is empty (computed field, bukan input manual)", () => {
     const issues = issuesOf(makeRecord({ usia: "" }), "usia");
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0].severity).toBe(SEVERITY.WARNING);
+    expect(issues).toHaveLength(0);
   });
 });
 

@@ -91,8 +91,8 @@ export default function App() {
     setRecords((prev) => prev.filter((r) => r.id !== id));
   }
 
-  function handleExport() {
-    exportToExcel(records, exportFilename);
+  async function handleExport() {
+    await exportToExcel(records, exportFilename);
   }
 
   function handleReset() {

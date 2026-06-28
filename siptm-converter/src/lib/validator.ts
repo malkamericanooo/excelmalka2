@@ -163,18 +163,10 @@ function validateGulaDarah(gds: string | number): ValidationIssue[] {
 }
 
 function validateUsia(usia: string | number): ValidationIssue[] {
-  const s = String(usia ?? "").trim();
-  if (s === "") {
-    return [{ field: "usia", message: "Usia belum diisi", severity: SEVERITY.WARNING }];
-  }
-  const v = Number(s);
-  if (isNaN(v)) return [];
-  if (v < 0) {
-    return [{ field: "usia", message: `Usia ${v} tidak valid (negatif)`, severity: SEVERITY.ERROR }];
-  }
-  if (v > 120) {
-    return [{ field: "usia", message: `Usia ${v} tahun sangat tinggi (> 120) — periksa kembali`, severity: SEVERITY.WARNING }];
-  }
+  const v = Number(String(usia ?? "").trim());
+  if (isNaN(v) || String(usia ?? "").trim() === "") return [];
+  if (v < 0) return [{ field: "usia", message: `Usia ${v} tidak valid (negatif)`, severity: SEVERITY.ERROR }];
+  if (v > 120) return [{ field: "usia", message: `Usia ${v} tahun sangat tinggi (> 120) — periksa kembali`, severity: SEVERITY.WARNING }];
   return [];
 }
 

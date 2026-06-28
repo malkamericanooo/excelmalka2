@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { PatientRecord } from "./types";
 
 export const TOTAL_COLS = 62;
@@ -31,16 +31,16 @@ export const COL_COLORS: Record<number, string> = {
   58: "BF8F00", 59: "BF8F00", 60: "BF8F00", 61: "BF8F00",
 };
 
-/** Data-row background color (light blue, matches template data area) */
-const DATA_ROW_BG = "BED7EE";
+/** Data-row background (light blue, matches template data area) */
+const DATA_ROW_BG = "FFBED7EE";
 
 /**
  * 5-row header structure matching the fktpmar26 template exactly.
- * Row 0 = institutional row, Row 1 = group headers,
+ * Row 0 = institutional, Row 1 = group headers,
  * Row 2 = sub-group/column headers, Row 3 = sub-column headers,
- * Row 4 = leaf headers (Mata Kanan / Kiri / Rujuk RS etc.)
+ * Row 4 = leaf headers.
  */
-const HEADER_ROWS: string[][] = [
+export const HEADER_ROWS: string[][] = [
   // Row 0 – institutional
   Array(TOTAL_COLS).fill(""),
 
@@ -222,153 +222,114 @@ export function recordToRow(record: PatientRecord, index: number): unknown[] {
   ];
 }
 
-function applyHeaderStyle(ws: XLSX.WorkSheet, r: number, c: number, colIdx: number): void {
-  const addr = XLSX.utils.encode_cell({ r, c });
-  if (!ws[addr]) ws[addr] = { v: "", t: "s" };
-  const bgColor = COL_COLORS[colIdx] ?? "2F5597";
-  const textColor = colIdx === 0 ? "FFFFFF" : "FFFFFF";
-  ws[addr].s = {
-    fill: { patternType: "solid", fgColor: { rgb: bgColor } },
-    font: { bold: true, color: { rgb: textColor }, sz: 9 },
-    alignment: { horizontal: "center", vertical: "center", wrapText: true },
-    border: {
-      top: { style: "thin", color: { rgb: "FFFFFF" } },
-      bottom: { style: "thin", color: { rgb: "FFFFFF" } },
-      left: { style: "thin", color: { rgb: "FFFFFF" } },
-      right: { style: "thin", color: { rgb: "FFFFFF" } },
-    },
-  };
+/** Column widths in characters (62 cols, 0-indexed) */
+const COL_WIDTHS = [
+  4, 18, 18, 24, 14, 12, 22, 22, 28, 14, 16, 18, 16, 10,
+  16, 16, 16, 16, 16, 16,
+  10, 14, 14, 14, 14, 18, 10,
+  8, 8, 10, 10, 12, 14, 10,
+  20, 20, 20, 20, 22,
+  12, 12, 10, 12, 12, 10,
+  12, 12, 10, 12, 12, 10, 12, 12, 10,
+  12, 18, 14, 18,
+  12, 8, 10, 12,
+];
+
+/** Header row heights in points */
+const HEADER_HEIGHTS = [20, 40, 50, 40, 30];
+
+function argb(hex: string): string {
+  return "FF" + hex.toUpperCase();
 }
 
-function applyDataStyle(ws: XLSX.WorkSheet, r: number, c: number, colIdx: number): void {
-  const addr = XLSX.utils.encode_cell({ r, c });
-  if (!ws[addr]) ws[addr] = { v: "", t: "s" };
-  ws[addr].s = {
-    fill: { patternType: "solid", fgColor: { rgb: DATA_ROW_BG } },
-    font: { sz: 9 },
-    alignment: { vertical: "center", wrapText: false },
-    border: {
-      top: { style: "thin", color: { rgb: "B0C4DE" } },
-      bottom: { style: "thin", color: { rgb: "B0C4DE" } },
-      left: { style: "thin", color: { rgb: "B0C4DE" } },
-      right: { style: "thin", color: { rgb: "B0C4DE" } },
-    },
-  };
+const WHITE = argb("FFFFFF");
+
+function headerFill(colIdx: number): ExcelJS.Fill {
+  const color = COL_COLORS[colIdx] ?? "2F5597";
+  return { type: "pattern", pattern: "solid", fgColor: { argb: argb(color) } };
 }
 
-export function exportToExcel(
+function headerFont(colIdx: number): Partial<ExcelJS.Font> {
+  const dark = ["385623", "00B050"];
+  const color = COL_COLORS[colIdx] ?? "2F5597";
+  const textColor = dark.includes(color) ? "FFFFFF" : "FFFFFF";
+  return { bold: true, color: { argb: argb(textColor) }, size: 9 };
+}
+
+const HEADER_ALIGNMENT: Partial<ExcelJS.Alignment> = {
+  horizontal: "center",
+  vertical: "middle",
+  wrapText: true,
+};
+
+const DATA_ALIGNMENT: Partial<ExcelJS.Alignment> = {
+  vertical: "middle",
+  wrapText: false,
+};
+
+function thinBorder(colorArgb: string): Partial<ExcelJS.Borders> {
+  const s: ExcelJS.BorderStyle = "thin";
+  const c = { argb: colorArgb };
+  return { top: { style: s, color: c }, bottom: { style: s, color: c }, left: { style: s, color: c }, right: { style: s, color: c } };
+}
+
+export async function exportToExcel(
   records: PatientRecord[],
   filename: string = "fktpmar26_export.xlsx"
-): void {
-  const wb = XLSX.utils.book_new();
+): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("fktpmar26");
 
-  const rows: unknown[][] = [
-    ...HEADER_ROWS,
-    ...records.map(recordToRow),
+  // Column widths
+  ws.columns = COL_WIDTHS.map((w) => ({ width: w }));
+
+  // Add header rows
+  HEADER_ROWS.forEach((headerRow, ri) => {
+    const row = ws.addRow(headerRow);
+    row.height = HEADER_HEIGHTS[ri] ?? 20;
+    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+      const ci = colNum - 1; // 0-based
+      if (ci >= TOTAL_COLS) return;
+      cell.fill = headerFill(ci);
+      cell.font = headerFont(ci);
+      cell.alignment = HEADER_ALIGNMENT;
+      cell.border = thinBorder(WHITE);
+    });
+  });
+
+  // Add data rows
+  records.forEach((record, i) => {
+    const values = recordToRow(record, i) as (string | number)[];
+    const row = ws.addRow(values);
+    row.height = 15;
+    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+      const ci = colNum - 1;
+      if (ci >= TOTAL_COLS) return;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: DATA_ROW_BG } };
+      cell.font = { size: 9 };
+      cell.alignment = DATA_ALIGNMENT;
+      cell.border = thinBorder("FFB0C4DE");
+    });
+  });
+
+  // Freeze top 5 rows + first 2 columns
+  ws.views = [
+    { state: "frozen", xSplit: 2, ySplit: HEADER_ROWS.length, topLeftCell: "C6", activeCell: "C6" },
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  // Column widths (62 columns)
-  ws["!cols"] = [
-    { wch: 4 },  // 0
-    { wch: 18 }, // 1 tanggal
-    { wch: 18 }, // 2 NIK
-    { wch: 24 }, // 3 nama
-    { wch: 14 }, // 4 tgl lahir
-    { wch: 12 }, // 5 jenis kelamin
-    { wch: 22 }, // 6 provinsi
-    { wch: 22 }, // 7 kota/kab
-    { wch: 28 }, // 8 alamat
-    { wch: 14 }, // 9 no hp
-    { wch: 16 }, // 10 pendidikan
-    { wch: 18 }, // 11 pekerjaan
-    { wch: 16 }, // 12 status kawin
-    { wch: 10 }, // 13 gol darah
-    { wch: 16 }, // 14 riwayat kel 1
-    { wch: 16 }, // 15 riwayat kel 2
-    { wch: 16 }, // 16 riwayat kel 3
-    { wch: 16 }, // 17 riwayat diri 1
-    { wch: 16 }, // 18 riwayat diri 2
-    { wch: 16 }, // 19 riwayat diri 3
-    { wch: 10 }, // 20 merokok
-    { wch: 14 }, // 21 aktivitas fisik
-    { wch: 14 }, // 22 gula berlebihan
-    { wch: 14 }, // 23 garam berlebihan
-    { wch: 14 }, // 24 lemak berlebihan
-    { wch: 18 }, // 25 kurang makan buah sayur
-    { wch: 10 }, // 26 alkohol
-    { wch: 8 },  // 27 sistol
-    { wch: 8 },  // 28 diastol
-    { wch: 10 }, // 29 TB
-    { wch: 10 }, // 30 BB
-    { wch: 12 }, // 31 LP
-    { wch: 14 }, // 32 GDS
-    { wch: 10 }, // 33 rujuk RS
-    { wch: 20 }, // 34 diagnosis 1
-    { wch: 20 }, // 35 diagnosis 2
-    { wch: 20 }, // 36 diagnosis 3
-    { wch: 20 }, // 37 terapi
-    { wch: 22 }, // 38 konseling
-    { wch: 12 }, // 39 katarak kanan
-    { wch: 12 }, // 40 katarak kiri
-    { wch: 10 }, // 41 katarak rujuk
-    { wch: 12 }, // 42 refraksi kanan
-    { wch: 12 }, // 43 refraksi kiri
-    { wch: 10 }, // 44 refraksi rujuk
-    { wch: 12 }, // 45 tuli kanan
-    { wch: 12 }, // 46 tuli kiri
-    { wch: 10 }, // 47 tuli rujuk
-    { wch: 12 }, // 48 omsk kanan
-    { wch: 12 }, // 49 omsk kiri
-    { wch: 10 }, // 50 omsk rujuk
-    { wch: 12 }, // 51 serumen kanan
-    { wch: 12 }, // 52 serumen kiri
-    { wch: 10 }, // 53 serumen rujuk
-    { wch: 12 }, // 54 hasil IVA
-    { wch: 18 }, // 55 TL IVA positif
-    { wch: 14 }, // 56 hasil sadanis
-    { wch: 18 }, // 57 TL sadanis
-    { wch: 12 }, // 58 konseling UBM
-    { wch: 8 },  // 59 CAR
-    { wch: 10 }, // 60 rujuk UBM
-    { wch: 12 }, // 61 kondisi
-  ];
-
-  // Row heights for header rows
-  ws["!rows"] = [
-    { hpt: 20 }, // row 0
-    { hpt: 40 }, // row 1 group headers
-    { hpt: 50 }, // row 2 column headers
-    { hpt: 40 }, // row 3 sub headers
-    { hpt: 30 }, // row 4 leaf headers
-  ];
-
-  // Apply header styles (5 header rows)
-  for (let r = 0; r < HEADER_ROWS.length; r++) {
-    for (let c = 0; c < TOTAL_COLS; c++) {
-      applyHeaderStyle(ws, r, c, c);
-    }
-  }
-
-  // Apply data row styles
-  for (let r = HEADER_ROWS.length; r < rows.length; r++) {
-    for (let c = 0; c < TOTAL_COLS; c++) {
-      applyDataStyle(ws, r, c, c);
-    }
-  }
-
-  // Freeze first 5 header rows + first 2 columns
-  ws["!freeze"] = {
-    xSplit: 2,
-    ySplit: HEADER_ROWS.length,
-    topLeftCell: "C6",
-    activePane: "bottomRight",
-    state: "frozen",
-  };
-
-  XLSX.utils.book_append_sheet(wb, ws, "fktpmar26");
-  XLSX.writeFile(wb, filename, { cellStyles: true });
+  // Write to buffer and trigger browser download
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /** Export a single record as label/value pairs for preview modal */

@@ -328,43 +328,62 @@ describe("recordToPreview", () => {
 });
 
 // ---------------------------------------------------------------------------
-// exportToExcel — mock XLSX.writeFile so test doesn't produce an actual file
+// exportToExcel — mock ExcelJS + DOM so test doesn't produce an actual file
 // ---------------------------------------------------------------------------
 
 describe("exportToExcel — integration (mocked I/O)", () => {
   beforeEach(() => {
-    vi.mock("xlsx", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("xlsx")>();
-      return {
-        ...actual,
-        writeFile: vi.fn(),
+    // Mock ExcelJS Workbook so no real file is written
+    vi.mock("exceljs", () => {
+      const mockWriteBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
+      const mockAddRow = vi.fn().mockReturnValue({
+        height: 0,
+        eachCell: vi.fn((_opts: unknown, cb: (cell: { fill: unknown; font: unknown; alignment: unknown; border: unknown }, colNum: number) => void) => {
+          for (let c = 1; c <= 62; c++) cb({ fill: null, font: null, alignment: null, border: null }, c);
+        }),
+      });
+      const mockWorksheet = {
+        columns: [],
+        views: [],
+        addRow: mockAddRow,
       };
+      const MockWorkbook = vi.fn().mockImplementation(() => ({
+        addWorksheet: vi.fn().mockReturnValue(mockWorksheet),
+        xlsx: { writeBuffer: mockWriteBuffer },
+      }));
+      return { default: { Workbook: MockWorkbook } };
     });
+
+    // Mock browser APIs used for download
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn().mockReturnValue("blob:mock"),
+      revokeObjectURL: vi.fn(),
+    });
+    const mockAnchor = {
+      href: "",
+      download: "",
+      click: vi.fn(),
+    };
+    vi.spyOn(document, "createElement").mockReturnValue(mockAnchor as unknown as HTMLElement);
+    vi.spyOn(document.body, "appendChild").mockImplementation((n) => n);
+    vi.spyOn(document.body, "removeChild").mockImplementation((n) => n);
   });
 
-  it("calls writeFile without throwing for a single record", async () => {
+  it("resolves without throwing for a single record", async () => {
     const { exportToExcel } = await import("./exporter");
-    const xlsx = await import("xlsx");
-    expect(() => exportToExcel([SAMPLE_RECORD], "test.xlsx")).not.toThrow();
-    expect(xlsx.writeFile).toHaveBeenCalledWith(
-      expect.anything(),
-      "test.xlsx",
-      expect.objectContaining({ cellStyles: true })
-    );
+    await expect(exportToExcel([SAMPLE_RECORD], "test.xlsx")).resolves.toBeUndefined();
   });
 
-  it("calls writeFile without throwing for multiple records", async () => {
+  it("resolves without throwing for multiple records", async () => {
     const { exportToExcel } = await import("./exporter");
-    const xlsx = await import("xlsx");
-    expect(() =>
+    await expect(
       exportToExcel([SAMPLE_RECORD, SAMPLE_RECORD_2], "multi.xlsx")
-    ).not.toThrow();
-    expect(xlsx.writeFile).toHaveBeenCalled();
+    ).resolves.toBeUndefined();
   });
 
-  it("calls writeFile without throwing for empty records", async () => {
+  it("resolves without throwing for empty records", async () => {
     const { exportToExcel } = await import("./exporter");
-    expect(() => exportToExcel([], "empty.xlsx")).not.toThrow();
+    await expect(exportToExcel([], "empty.xlsx")).resolves.toBeUndefined();
   });
 });
 
